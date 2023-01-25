@@ -1,0 +1,110 @@
+const doPartA = require('./index').doPartA;
+const glob = require('glob').sync;
+
+const ballFiles = glob('source/easy/ball/*.txt');
+const brickFiles = glob('source/easy/brick/*.txt');
+const cylinderFiles = glob('source/easy/cylinder/*.txt');
+const testFiles = glob('source/test/*.txt');
+
+function doPartAForArrays(filePathArray){
+  let redHists = [];
+  let greenHists = [];
+  let blueHists = [];
+
+  filePathArray.forEach(filePath => {
+    const result = doPartA(filePath);
+
+    redHists.push(result.redHist);
+    greenHists.push(result.greenHist);
+    blueHists.push(result.blueHist);
+  });
+
+  return{
+    redHists,
+    greenHists,
+    blueHists
+  };
+  
+}
+
+function takeAverage(histogramArray){
+  let avgHist = {};
+
+  for(let i=0; i<256; i++){
+    avgHist[i] = 0;
+  }
+
+  histogramArray.forEach(histogram => {
+    for(let i=0; i<256; i++){
+      avgHist[i]= avgHist[i] + histogram[i];
+    }
+  });
+
+  const N = histogramArray.length;
+
+  for(let i=0; i<256; i++){
+    avgHist[i]=parseInt(avgHist[i] /N);
+  }
+
+  return avgHist;
+}
+
+function compareHistograms(histA, histB){
+  let sum = 0;
+  for(let i = 0; i < 256; i++){
+    let diff = Math.abs(histA[i] - histB[i]);
+    sum = sum + diff;
+  }
+
+  return sum;
+}
+
+const ballHistograms = doPartAForArrays(ballFiles);
+const brickHistograms = doPartAForArrays(brickFiles);
+const cylinderHistograms = doPartAForArrays(cylinderFiles);
+
+const ballAvgHist = {
+  red: takeAverage(ballHistograms.redHists),
+  green: takeAverage(ballHistograms.greenHists),
+  blue: takeAverage(ballHistograms.blueHists)
+};
+const brickAvgHist = {
+  red: takeAverage(brickHistograms.redHists),
+  green: takeAverage(brickHistograms.greenHists),
+  blue: takeAverage(brickHistograms.blueHists)
+};
+const cylinderAvgHist = {
+  red: takeAverage(cylinderHistograms.redHists),
+  green: takeAverage(cylinderHistograms.greenHists),
+  blue: takeAverage(cylinderHistograms.blueHists)
+};
+
+const avgHists = [ballAvgHist, brickAvgHist, cylinderAvgHist];
+
+function predict(testFilePath, avgHists){
+    const testHist = doPartA(testFilePath);
+
+    let results = [];
+    avgHists.forEach(avgHist =>{
+      const redComparison = compareHistograms(testHist.redHist, avgHist.red);
+      const greenComparison = compareHistograms(testHist.greenHist, avgHist.green);
+      const blueComparison = compareHistograms(testHist.blueHist, avgHist.blue);
+
+      const metric = redComparison + greenComparison + blueComparison;
+
+      results.push(metric);
+    });
+
+    const minResult = Math.min(... results);
+    const minIndex = results.indexOf(minResult);
+
+    switch(minIndex){
+      case 0: 
+        return 'ball';
+      case 1: 
+        return 'brick';
+      case 2: 
+        return 'cylinder';
+  }
+}
+testFiles.forEach(filePath => console.log(predict(filePath, avgHists)));
